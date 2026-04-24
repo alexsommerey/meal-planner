@@ -1,15 +1,15 @@
 //! OpenTelemetry bootstrap: traces + metrics via OTLP/gRPC.
 
+use std::time::Duration;
+
 use anyhow::Context;
-use futures_util::future::BoxFuture;
 use opentelemetry::{KeyValue, Value, global, trace::TracerProvider as _};
 use opentelemetry_otlp::{MetricExporter, SpanExporter as OtlpSpanExporter};
 use opentelemetry_sdk::{
     Resource,
-    export::trace::{ExportResult, SpanData, SpanExporter},
+    error::OTelSdkResult,
     metrics::{PeriodicReader, SdkMeterProvider},
-    runtime,
-    trace::TracerProvider,
+    trace::{SdkTracerProvider, SpanData, SpanExporter},
 };
 use opentelemetry_semantic_conventions::resource::SERVICE_NAME;
 use tracing_opentelemetry::OpenTelemetryLayer;
@@ -17,7 +17,7 @@ use tracing_subscriber::{EnvFilter, prelude::*};
 
 /// Shuts down providers on drop so buffered spans/metrics flush before exit.
 pub struct Guard {
-    tracer_provider: TracerProvider,
+    tracer_provider: SdkTracerProvider,
     meter_provider: SdkMeterProvider,
 }
 
@@ -30,7 +30,9 @@ impl Drop for Guard {
 
 /// Reads `OTEL_*` env vars; defaults to `http://localhost:4317` (OTLP/gRPC).
 pub fn init(service_name: &'static str) -> anyhow::Result<Guard> {
-    let resource = Resource::new([KeyValue::new(SERVICE_NAME, service_name)]);
+    let resource = Resource::builder()
+        .with_attribute(KeyValue::new(SERVICE_NAME, service_name))
+        .build();
 
     let span_exporter = CodePathNormalizer::new(
         OtlpSpanExporter::builder()
@@ -38,9 +40,9 @@ pub fn init(service_name: &'static str) -> anyhow::Result<Guard> {
             .build()
             .context("build OTLP span exporter")?,
     );
-    let tracer_provider = TracerProvider::builder()
+    let tracer_provider = SdkTracerProvider::builder()
         .with_resource(resource.clone())
-        .with_batch_exporter(span_exporter, runtime::Tokio)
+        .with_batch_exporter(span_exporter)
         .build();
     global::set_tracer_provider(tracer_provider.clone());
 
@@ -48,7 +50,7 @@ pub fn init(service_name: &'static str) -> anyhow::Result<Guard> {
         .with_tonic()
         .build()
         .context("build OTLP metric exporter")?;
-    let reader = PeriodicReader::builder(metric_exporter, runtime::Tokio).build();
+    let reader = PeriodicReader::builder(metric_exporter).build();
     let meter_provider = SdkMeterProvider::builder()
         .with_resource(resource)
         .with_reader(reader)
@@ -69,7 +71,7 @@ pub fn init(service_name: &'static str) -> anyhow::Result<Guard> {
     })
 }
 
-/// `SpanExporter` wrapper that rewrites `code.filepath` attributes before
+/// `SpanExporter` wrapper that rewrites `code.file.path` attributes before
 /// export, so spans from third-party crates group across developers and
 /// platforms instead of carrying machine-specific registry paths.
 #[derive(Debug)]
@@ -84,10 +86,10 @@ impl<E> CodePathNormalizer<E> {
 }
 
 impl<E: SpanExporter> SpanExporter for CodePathNormalizer<E> {
-    fn export(&mut self, mut batch: Vec<SpanData>) -> BoxFuture<'static, ExportResult> {
+    async fn export(&self, mut batch: Vec<SpanData>) -> OTelSdkResult {
         for span in &mut batch {
             for attr in &mut span.attributes {
-                if attr.key.as_str() != "code.filepath" {
+                if attr.key.as_str() != "code.file.path" {
                     continue;
                 }
                 let rewritten = match &attr.value {
@@ -103,14 +105,14 @@ impl<E: SpanExporter> SpanExporter for CodePathNormalizer<E> {
                 }
             }
         }
-        self.inner.export(batch)
+        self.inner.export(batch).await
     }
 
-    fn shutdown(&mut self) {
-        self.inner.shutdown();
+    fn shutdown_with_timeout(&mut self, timeout: Duration) -> OTelSdkResult {
+        self.inner.shutdown_with_timeout(timeout)
     }
 
-    fn force_flush(&mut self) -> BoxFuture<'static, ExportResult> {
+    fn force_flush(&mut self) -> OTelSdkResult {
         self.inner.force_flush()
     }
 
