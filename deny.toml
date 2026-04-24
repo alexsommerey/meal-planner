@@ -28,10 +28,16 @@ allow = [
     "Unicode-DFS-2016",
     "Zlib",
 ]
+# Workspace crates are `publish = false`, so skip them here — they'd
+# otherwise flag as unlicensed and never will be.
+private = { ignore = true }
 
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# `{ workspace = true }` and `path = "…"` deps read as wildcards to
+# cargo-deny. Whitelist them so the ban only catches external crates.
+allow-wildcard-paths = true
 highlight = "all"
 
 [sources]

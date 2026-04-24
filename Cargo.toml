@@ -10,6 +10,7 @@ members = [
 [workspace.package]
 edition = "2024"
 rust-version = "1.85"
+publish = false
 
 [workspace.dependencies]
 # Internal crates — depend on these with `foo = { workspace = true }`
