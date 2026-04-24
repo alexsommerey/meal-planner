@@ -24,6 +24,7 @@ dependencies = [
  "domain",
  "serde",
  "thiserror",
+ "uuid",
 ]
 
 [[package]]
@@ -1673,10 +1674,12 @@ dependencies = [
  "application",
  "axum",
  "domain",
+ "http-body-util",
  "infrastructure",
  "serde",
  "serde_json",
  "tokio",
+ "tower",
  "tower-http",
  "tracing",
 ]

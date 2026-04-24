@@ -1,28 +1,16 @@
-use axum::{Json, Router, extract::Request, http::HeaderName, routing::get};
-use tower_http::{
-    request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
-    trace::TraceLayer,
-};
-use tracing::info_span;
+use std::sync::Arc;
 
-const X_REQUEST_ID: HeaderName = HeaderName::from_static("x-request-id");
+use infrastructure::recipes::InMemoryRecipeRepository;
+use web::{AppState, build_app};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let _telemetry = infrastructure::telemetry::init("meal-planner-web")?;
 
-    // Layer order in axum: last `.layer(…)` call becomes the outermost
-    // (runs first on requests, last on responses). We want:
-    //   request : SetRequestId → TraceLayer → PropagateRequestId → handler
-    //   response: handler → PropagateRequestId → TraceLayer → SetRequestId
-    // so add them bottom-up.
-    let traced = Router::new()
-        .route("/", get(index))
-        .layer(PropagateRequestIdLayer::new(X_REQUEST_ID))
-        .layer(TraceLayer::new_for_http().make_span_with(make_request_span))
-        .layer(SetRequestIdLayer::new(X_REQUEST_ID, MakeRequestUuid));
-    let health = Router::new().route("/healthz", get(healthz));
-    let app = traced.merge(health);
+    let state = AppState {
+        repo: Arc::new(InMemoryRecipeRepository::new()),
+    };
+    let app = build_app(state);
 
     let port: u16 = std::env::var("PORT")
         .ok()
@@ -35,29 +23,6 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     Ok(())
-}
-
-async fn index() -> &'static str {
-    "meal planner — v0.0.1"
-}
-
-async fn healthz() -> Json<serde_json::Value> {
-    Json(serde_json::json!({ "status": "ok" }))
-}
-
-fn make_request_span(req: &Request) -> tracing::Span {
-    let request_id = req
-        .headers()
-        .get(&X_REQUEST_ID)
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or_default();
-    info_span!(
-        "request",
-        method = %req.method(),
-        uri = %req.uri(),
-        version = ?req.version(),
-        request_id = %request_id,
-    )
 }
 
 /// Resolves on `Ctrl+C` or (on Unix) `SIGTERM` so axum stops accepting new
