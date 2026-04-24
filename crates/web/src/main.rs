@@ -6,12 +6,9 @@ use tracing::Level;
 async fn main() -> anyhow::Result<()> {
     let _telemetry = infrastructure::telemetry::init("meal-planner-web")?;
 
-    let app = Router::new()
-        .route("/", get(index))
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(DefaultMakeSpan::new().level(Level::INFO)),
-        );
+    let app = Router::new().route("/", get(index)).layer(
+        TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::new().level(Level::INFO)),
+    );
 
     let port: u16 = std::env::var("PORT")
         .ok()
