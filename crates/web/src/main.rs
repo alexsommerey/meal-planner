@@ -1,14 +1,18 @@
 use std::sync::Arc;
 
-use infrastructure::recipes::InMemoryRecipeRepository;
+use infrastructure::recipes::SqlxRecipeRepository;
 use web::{AppState, build_app};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let _telemetry = infrastructure::telemetry::init("meal-planner-web")?;
 
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "sqlite:meal-planner.db?mode=rwc".to_string());
+    tracing::info!("connecting to {database_url}");
+    let repo = SqlxRecipeRepository::connect(&database_url).await?;
     let state = AppState {
-        repo: Arc::new(InMemoryRecipeRepository::new()),
+        repo: Arc::new(repo),
     };
     let app = build_app(state);
 

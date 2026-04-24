@@ -50,7 +50,10 @@ tracing-opentelemetry = "0.32"
 tower-http = { version = "0.6", features = ["trace", "request-id", "uuid"] }
 
 # IDs
-uuid = { version = "1", features = ["v4"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Persistence
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite", "macros", "migrate", "uuid"] }
 
 # Test-only: drive axum routers without binding a port
 tower = { version = "0.5", features = ["util"] }

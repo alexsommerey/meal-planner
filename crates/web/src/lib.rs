@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use application::recipes::{CreateRecipeInput, CreateRecipeItem};
 use axum::{
     Json, Router,
     extract::{Request, State},
@@ -7,8 +8,8 @@ use axum::{
     response::{Html, IntoResponse, Response},
     routing::get,
 };
-use domain::{Recipe, RecipeIngredient};
-use infrastructure::recipes::InMemoryRecipeRepository;
+use domain::{InputUnit, Quantity, Recipe};
+use infrastructure::recipes::SqlxRecipeRepository;
 use serde::Deserialize;
 use tower_http::{
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
@@ -20,7 +21,7 @@ pub const X_REQUEST_ID: HeaderName = HeaderName::from_static("x-request-id");
 
 #[derive(Clone)]
 pub struct AppState {
-    pub repo: Arc<InMemoryRecipeRepository>,
+    pub repo: Arc<SqlxRecipeRepository>,
 }
 
 pub fn build_app(state: AppState) -> Router {
@@ -49,18 +50,34 @@ async fn healthz() -> Json<serde_json::Value> {
 }
 
 #[derive(Deserialize)]
-struct NewRecipe {
+struct NewRecipeRequest {
     name: String,
-    ingredients: Vec<RecipeIngredient>,
+    ingredients: Vec<NewIngredientRequest>,
+}
+
+#[derive(Deserialize)]
+struct NewIngredientRequest {
+    name: String,
+    amount: f64,
+    unit: InputUnit,
 }
 
 async fn create_recipe(
     State(state): State<AppState>,
-    Json(payload): Json<NewRecipe>,
+    Json(payload): Json<NewRecipeRequest>,
 ) -> Result<(StatusCode, Json<Recipe>), AppError> {
-    let recipe =
-        application::recipes::create_recipe(&*state.repo, payload.name, payload.ingredients)
-            .await?;
+    let input = CreateRecipeInput {
+        name: payload.name,
+        items: payload
+            .ingredients
+            .into_iter()
+            .map(|i| CreateRecipeItem {
+                ingredient_name: i.name,
+                quantity: Quantity::from_input(i.amount, i.unit),
+            })
+            .collect(),
+    };
+    let recipe = application::recipes::create_recipe(&*state.repo, input).await?;
     Ok((StatusCode::CREATED, Json(recipe)))
 }
 
