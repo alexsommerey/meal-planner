@@ -9,7 +9,11 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new().route("/", get(index));
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;
+    let port: u16 = std::env::var("PORT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(3000);
+    let listener = tokio::net::TcpListener::bind(("127.0.0.1", port)).await?;
     tracing::info!("listening on http://{}", listener.local_addr()?);
     axum::serve(listener, app).await?;
 
