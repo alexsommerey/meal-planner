@@ -1,5 +1,9 @@
 # Claude Working Notes — Meal Planner
 
+## Planning
+
+Always plan before coding. After we've agreed on direction, present a concrete plan — files to change, deps to add, order of steps — and wait for explicit approval before editing. A conceptual recommendation is not a plan.
+
 ## Commit style
 
 **Conventional Commits.** `<type>: <subject>` — lowercase subject, no trailing period.
