@@ -21,3 +21,6 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
       - run: cargo test --workspace --all-features --locked
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
