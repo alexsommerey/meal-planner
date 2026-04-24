@@ -23,7 +23,7 @@
     legend { padding: 0 0.4rem; font-weight: 600; }
     label { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
     label > span { min-width: 5rem; color: var(--muted); }
-    input {
+    input, select {
       font: inherit;
       padding: 0.3rem 0.5rem;
       border: 1px solid var(--border);
@@ -34,6 +34,7 @@
       min-width: 0;
     }
     input[type=number] { max-width: 6rem; flex: 0 0 auto; }
+    select { max-width: 6rem; flex: 0 0 auto; }
     button {
       font: inherit;
       padding: 0.3rem 0.7rem;
@@ -97,8 +98,16 @@
 
   <template id="ingredient-template">
     <div class="ingredient-row">
-      <input name="ingredient" placeholder="ingredient (e.g. bread)" required>
-      <input name="grams" type="number" step="0.1" min="0" placeholder="grams" required>
+      <input name="ingredient" placeholder="ingredient (e.g. flour)" required>
+      <input name="amount" type="number" step="0.1" min="0" placeholder="amount" required>
+      <select name="unit">
+        <option value="g" selected>g</option>
+        <option value="ml">ml</option>
+        <option value="tsp">tsp</option>
+        <option value="tbsp">tbsp</option>
+        <option value="cup">cup</option>
+        <option value="piece">piece</option>
+      </select>
       <button type="button" class="icon remove" title="Remove">×</button>
     </div>
   </template>
@@ -127,9 +136,25 @@
 
     function readIngredients() {
       return Array.from(ingredientsEl.querySelectorAll(".ingredient-row")).map(row => ({
-        ingredient: row.querySelector("[name=ingredient]").value.trim(),
-        quantity: { grams: parseFloat(row.querySelector("[name=grams]").value) },
+        name: row.querySelector("[name=ingredient]").value.trim(),
+        amount: parseFloat(row.querySelector("[name=amount]").value),
+        unit: row.querySelector("[name=unit]").value,
       }));
+    }
+
+    /** Convert canonical (kg / l / piece) back to a cooking-friendly string. */
+    function formatQuantity(q) {
+      switch (q.unit) {
+        case "kilogram": return `${roundTo(q.amount * 1000, 2)} g`;
+        case "liter":    return `${roundTo(q.amount * 1000, 2)} ml`;
+        case "piece":    return `${roundTo(q.amount, 2)} pc`;
+        default:         return `${q.amount} ${q.unit}`;
+      }
+    }
+
+    function roundTo(n, places) {
+      const f = 10 ** places;
+      return Math.round(n * f) / f;
     }
 
     document.getElementById("new-recipe").addEventListener("submit", async (e) => {
@@ -171,7 +196,7 @@
             <div class="recipe-name">${escapeHtml(r.name)}</div>
             <div class="recipe-id">${escapeHtml(r.id)}</div>
             <div class="recipe-ings">${r.ingredients.map(i =>
-              `${escapeHtml(i.ingredient)} — ${i.quantity.grams}g`
+              `${escapeHtml(i.ingredient.name)} — ${escapeHtml(formatQuantity(i.quantity))}`
             ).join(", ")}</div>
           </li>
         `).join("");
