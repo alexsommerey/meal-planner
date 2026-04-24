@@ -10,5 +10,16 @@ application = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
+
+# Telemetry
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+opentelemetry-otlp = { workspace = true }
+opentelemetry-semantic-conventions = { workspace = true }
+
 # TODO: add sqlx when wiring up persistence:
 # sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "migrate"] }

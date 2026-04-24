@@ -7,3 +7,6 @@
 
 # Per-machine preview server config (absolute toolchain paths, ports)
 .claude/launch.json
+
+# Per-machine Claude Code permission grants
+.claude/settings.local.json
