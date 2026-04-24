@@ -56,7 +56,7 @@ pub fn init(service_name: &'static str) -> anyhow::Result<Guard> {
     tracing_subscriber::registry()
         .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .with(tracing_subscriber::fmt::layer())
-        .with(OpenTelemetryLayer::new(tracer))
+        .with(OpenTelemetryLayer::new(tracer).with_location(false))
         .init();
 
     Ok(Guard {
