@@ -4,7 +4,7 @@ use axum::{
     Json, Router,
     extract::{Request, State},
     http::{HeaderName, StatusCode},
-    response::{IntoResponse, Response},
+    response::{Html, IntoResponse, Response},
     routing::get,
 };
 use domain::{Recipe, RecipeIngredient};
@@ -40,8 +40,8 @@ pub fn build_app(state: AppState) -> Router {
     traced.merge(health)
 }
 
-async fn index() -> &'static str {
-    "meal planner — v0.0.1"
+async fn index() -> Html<&'static str> {
+    Html(include_str!("index.html"))
 }
 
 async fn healthz() -> Json<serde_json::Value> {

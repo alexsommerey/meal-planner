@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Meal Planner — recipe tester</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --border: color-mix(in srgb, currentColor 20%, transparent);
+      --muted: color-mix(in srgb, currentColor 60%, transparent);
+    }
+    * { box-sizing: border-box; }
+    body {
+      font: 14px/1.5 system-ui, sans-serif;
+      max-width: 720px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 0.2rem; }
+    h2 { font-size: 1rem; margin: 1.5rem 0 0.6rem; display: flex; align-items: center; gap: 0.6rem; }
+    .subtitle { color: var(--muted); margin: 0 0 1.5rem; font-size: 0.85rem; }
+    fieldset { border: 1px solid var(--border); border-radius: 6px; padding: 1rem; margin: 0; }
+    legend { padding: 0 0.4rem; font-weight: 600; }
+    label { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+    label > span { min-width: 5rem; color: var(--muted); }
+    input {
+      font: inherit;
+      padding: 0.3rem 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: transparent;
+      color: inherit;
+      flex: 1;
+      min-width: 0;
+    }
+    input[type=number] { max-width: 6rem; flex: 0 0 auto; }
+    button {
+      font: inherit;
+      padding: 0.3rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+    button:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+    button.primary { border-color: currentColor; font-weight: 600; }
+    button.icon { padding: 0.1rem 0.5rem; }
+    .ingredient-row {
+      display: flex;
+      gap: 0.4rem;
+      margin-bottom: 0.4rem;
+      align-items: center;
+    }
+    .ingredient-row input[name=ingredient] { flex: 1; }
+    .actions { display: flex; gap: 0.5rem; margin-top: 0.8rem; }
+    #status {
+      margin-top: 0.6rem;
+      font-size: 0.85rem;
+      min-height: 1.2em;
+    }
+    #status.error { color: #c0392b; }
+    #status.success { color: #27ae60; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    .recipe {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.6rem 0.8rem;
+      margin-bottom: 0.5rem;
+    }
+    .recipe-name { font-weight: 600; }
+    .recipe-id { color: var(--muted); font-family: monospace; font-size: 0.75rem; }
+    .recipe-ings { color: var(--muted); margin-top: 0.3rem; font-size: 0.85rem; }
+    .empty { color: var(--muted); font-style: italic; }
+  </style>
+</head>
+<body>
+  <h1>Meal Planner</h1>
+  <p class="subtitle">Manual tester for the recipe API.</p>
+
+  <form id="new-recipe">
+    <fieldset>
+      <legend>New recipe</legend>
+      <label><span>Name</span><input name="name" required placeholder="e.g. Toast"></label>
+      <h2>Ingredients</h2>
+      <div id="ingredients"></div>
+      <div class="actions">
+        <button type="button" id="add-ingredient">+ ingredient</button>
+        <button type="submit" class="primary">Save recipe</button>
+      </div>
+      <div id="status"></div>
+    </fieldset>
+  </form>
+
+  <h2>Recipes <button type="button" id="refresh" class="icon" title="Refresh">↻</button></h2>
+  <ul id="recipe-list"></ul>
+
+  <template id="ingredient-template">
+    <div class="ingredient-row">
+      <input name="ingredient" placeholder="ingredient (e.g. bread)" required>
+      <input name="grams" type="number" step="0.1" min="0" placeholder="grams" required>
+      <button type="button" class="icon remove" title="Remove">×</button>
+    </div>
+  </template>
+
+  <script>
+    const ingredientsEl = document.getElementById("ingredients");
+    const tpl = document.getElementById("ingredient-template");
+    const statusEl = document.getElementById("status");
+    const listEl = document.getElementById("recipe-list");
+
+    function addIngredientRow() {
+      const node = tpl.content.firstElementChild.cloneNode(true);
+      node.querySelector(".remove").addEventListener("click", () => {
+        if (ingredientsEl.children.length > 1) node.remove();
+      });
+      ingredientsEl.appendChild(node);
+    }
+    addIngredientRow();
+
+    document.getElementById("add-ingredient").addEventListener("click", addIngredientRow);
+
+    function setStatus(text, kind) {
+      statusEl.textContent = text;
+      statusEl.className = kind || "";
+    }
+
+    function readIngredients() {
+      return Array.from(ingredientsEl.querySelectorAll(".ingredient-row")).map(row => ({
+        ingredient: row.querySelector("[name=ingredient]").value.trim(),
+        quantity: { grams: parseFloat(row.querySelector("[name=grams]").value) },
+      }));
+    }
+
+    document.getElementById("new-recipe").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setStatus("saving…");
+      const payload = {
+        name: e.target.elements.name.value.trim(),
+        ingredients: readIngredients(),
+      };
+      try {
+        const res = await fetch("/recipes", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
+        const recipe = await res.json();
+        setStatus(`saved ${recipe.id}`, "success");
+        e.target.reset();
+        ingredientsEl.replaceChildren();
+        addIngredientRow();
+        await loadRecipes();
+      } catch (err) {
+        setStatus(`error: ${err.message}`, "error");
+      }
+    });
+
+    async function loadRecipes() {
+      try {
+        const res = await fetch("/recipes");
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        const recipes = await res.json();
+        if (recipes.length === 0) {
+          listEl.innerHTML = `<li class="empty">No recipes yet.</li>`;
+          return;
+        }
+        listEl.innerHTML = recipes.map(r => `
+          <li class="recipe">
+            <div class="recipe-name">${escapeHtml(r.name)}</div>
+            <div class="recipe-id">${escapeHtml(r.id)}</div>
+            <div class="recipe-ings">${r.ingredients.map(i =>
+              `${escapeHtml(i.ingredient)} — ${i.quantity.grams}g`
+            ).join(", ")}</div>
+          </li>
+        `).join("");
+      } catch (err) {
+        listEl.innerHTML = `<li class="empty">Failed to load: ${escapeHtml(err.message)}</li>`;
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+      }[c]));
+    }
+
+    document.getElementById("refresh").addEventListener("click", loadRecipes);
+    loadRecipes();
+  </script>
+</body>
+</html>
