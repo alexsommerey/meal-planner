@@ -484,6 +484,7 @@ dependencies = [
  "anyhow",
  "application",
  "domain",
+ "futures-util",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry-semantic-conventions",
