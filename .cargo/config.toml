@@ -1,0 +1,11 @@
+# Strip the cargo registry prefix from `file!()` output so spans
+# exported to OTel show `tower-http-0.6.8/src/trace/make_span.rs`
+# instead of the full `C:\Users\<name>\.cargo\registry\src\...\` path.
+#
+# NOTE: the home-dir prefix is hardcoded for this developer's machine.
+# Portable cross-machine setup would need per-user overrides (cargo
+# doesn't expand env vars inside rustflags).
+[build]
+rustflags = [
+    '--remap-path-prefix', 'C:\Users\alex_\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\=',
+]
