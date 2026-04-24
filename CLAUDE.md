@@ -20,9 +20,10 @@ Body explains *why*, not *what*, wrapped around 72 chars. Always include the `Co
 `master` is protected — **never push directly**. Workflow for every change:
 
 1. Branch from master: `git checkout -b <type>/<short-name>` (types match commit prefixes — `feat/`, `fix/`, `chore/`, `refactor/`).
-2. Commit, push the branch.
-3. Open a PR against master.
-4. Merge via **squash** or **rebase** only (merge commits blocked).
+2. If the session started you on a harness-generated branch (e.g. `claude/...`), **rename it first** (`git branch -m <type>/<short-name>`) — never push or open a PR from the auto-generated name.
+3. Commit, push the branch.
+4. Open a PR against master.
+5. Merge via **squash** or **rebase** only (merge commits blocked).
 
 Enforced on master: PR required, force-push blocked, deletion blocked, linear history required.
 
