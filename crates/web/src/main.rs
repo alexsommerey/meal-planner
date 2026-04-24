@@ -1,5 +1,6 @@
 use axum::{Router, routing::get};
-use tower_http::trace::TraceLayer;
+use tower_http::trace::{DefaultMakeSpan, TraceLayer};
+use tracing::Level;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -7,7 +8,10 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/", get(index))
-        .layer(TraceLayer::new_for_http());
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(DefaultMakeSpan::new().level(Level::INFO)),
+        );
 
     let port: u16 = std::env::var("PORT")
         .ok()
