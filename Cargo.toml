@@ -48,3 +48,10 @@ tracing-opentelemetry = "0.32"
 
 # HTTP middleware (trace, request-id; the `uuid` feature pulls in MakeRequestUuid)
 tower-http = { version = "0.6", features = ["trace", "request-id", "uuid"] }
+
+# IDs
+uuid = { version = "1", features = ["v4"] }
+
+# Test-only: drive axum routers without binding a port
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
