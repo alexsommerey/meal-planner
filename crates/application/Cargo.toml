@@ -1,0 +1,10 @@
+[package]
+name = "application"
+version = "0.0.1"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+domain = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
