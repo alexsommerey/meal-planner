@@ -21,7 +21,6 @@ opentelemetry = { workspace = true }
 opentelemetry_sdk = { workspace = true }
 opentelemetry-otlp = { workspace = true }
 opentelemetry-semantic-conventions = { workspace = true }
-futures-util = { workspace = true }
 
 # TODO: add sqlx when wiring up persistence:
 # sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "migrate"] }
