@@ -1,4 +1,4 @@
-use axum::{Router, routing::get};
+use axum::{Json, Router, routing::get};
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing::Level;
 
@@ -6,9 +6,11 @@ use tracing::Level;
 async fn main() -> anyhow::Result<()> {
     let _telemetry = infrastructure::telemetry::init("meal-planner-web")?;
 
-    let app = Router::new().route("/", get(index)).layer(
+    let traced = Router::new().route("/", get(index)).layer(
         TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::new().level(Level::INFO)),
     );
+    let health = Router::new().route("/healthz", get(healthz));
+    let app = traced.merge(health);
 
     let port: u16 = std::env::var("PORT")
         .ok()
@@ -23,4 +25,8 @@ async fn main() -> anyhow::Result<()> {
 
 async fn index() -> &'static str {
     "meal planner — v0.0.1"
+}
+
+async fn healthz() -> Json<serde_json::Value> {
+    Json(serde_json::json!({ "status": "ok" }))
 }
