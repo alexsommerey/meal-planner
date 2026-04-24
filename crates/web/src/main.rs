@@ -1,13 +1,13 @@
 use axum::{Router, routing::get};
-use tracing_subscriber::EnvFilter;
+use tower_http::trace::TraceLayer;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
-        .init();
+    let _telemetry = infrastructure::telemetry::init("meal-planner-web")?;
 
-    let app = Router::new().route("/", get(index));
+    let app = Router::new()
+        .route("/", get(index))
+        .layer(TraceLayer::new_for_http());
 
     let port: u16 = std::env::var("PORT")
         .ok()
